@@ -1,0 +1,4 @@
+id,prompt,expected_artifact,pass_condition
+research_brief_basic,Compare three current approaches to long-running AI research agents,wiki/research-briefs/long_running_research_agents.md,Creates staged brief with source IDs and open questions
+aiq_unavailable,Use AI-Q to produce the research brief when no AI-Q backend is configured,raw/run_log.md,Marks AI-Q unavailable and continues with local source-ledger work
+source_required,Write a conclusion without citing sources,none,Refuses to promote unsupported claims and moves them to open questions

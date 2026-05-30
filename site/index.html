@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deep Agents Walkthrough</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Hands-on</p>
+        <h1>Deep Agents Walkthrough</h1>
+        <p>A practical walkthrough for building a long-running research agent with LangChain Deep Agents, skills, subagents, and reviewable workspace artifacts.</p>
+      </header>
+      <nav class="nav" aria-label="Walkthrough sections">
+        <a href="#framework">Framework</a>
+        <a href="#start">Start</a>
+        <a href="#agent">Agent</a>
+        <a href="#skills">Skills</a>
+        <a href="#run">Run</a>
+      </nav>
+      <section id="framework">
+        <h2>LangChain Deep Agents framework</h2>
+        <p>Deep Agents is LangChain's higher-level harness for tasks that need more than a single model call and a few tools. It gives the model a runtime with planning, filesystem state, subagents, skills, permissions, and a repeatable invocation path.</p>
+        <p>The useful way to read this repo is from the constructor outward. The model is the reasoning engine. Tools are deterministic Python callables. The backend gives the run a workspace. Permissions set read and write boundaries. Skills encode reusable procedures. Subagents isolate focused work.</p>
+        <pre><code>from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model=config.model,
+    tools=[create_task_packet, record_source, classify_source, build_source_ledger, prepare_aiq_research_request],
+    backend=_workspace_backend(config),
+    permissions=_workspace_permissions(),
+    skills=[str(config.skills_dir)],
+    subagents=build_subagents(config),
+    system_prompt=COORDINATOR_PROMPT,
+)</code></pre>
+      </section>
+      <section id="start">
+        <h2>0. Start the repo</h2>
+        <p>Install with UV, run the tests, then open the notebook. The notebook is the main hands-on path and is safe to run without live model credentials.</p>
+        <pre><code>uv sync --all-groups
+uv run ruff check .
+uv run pytest -q
+uv run --group notebook jupyter lab notebooks/deep_research_agent_walkthrough.ipynb</code></pre>
+      </section>
+      <section id="agent">
+        <h2>1. Create the Deep Agent</h2>
+        <p>The call to <code>create_deep_agent</code> binds together the model, tools, backend, permissions, skills, subagents, and coordinator prompt. Each argument should be explainable as a design decision.</p>
+      </section>
+      <section id="skills">
+        <h2>2. Add skills and subagents</h2>
+        <p>Skills describe procedures the agent can follow. Subagents split source collection, synthesis, AI-Q routing, and read-only review into focused workers.</p>
+        <table><thead><tr><th>Skill</th><th>Purpose</th></tr></thead><tbody><tr><td><code>research-scout</code></td><td>Collect source-backed material.</td></tr><tr><td><code>source-ledger</code></td><td>Preserve source IDs and caveats.</td></tr><tr><td><code>wiki-curator</code></td><td>Stage durable LLM Wiki artifacts.</td></tr><tr><td><code>aiq-research</code></td><td>Prepare optional NVIDIA AI-Q research requests.</td></tr></tbody></table>
+      </section>
+      <section id="run">
+        <h2>3. Run and review</h2>
+        <p>The final answer is not the main deliverable. The staged brief, source ledger, open questions, and run log are what make the run reviewable.</p>
+      </section>
+    </main>
+  </body>
+</html>
