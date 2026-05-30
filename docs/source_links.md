@@ -21,6 +21,7 @@ Checked: May 30, 2026
 - NVIDIA AI-Q Agent Skills docs: https://docs.nvidia.com/aiq-blueprint/latest/integration/agent-skills.html
 - NVIDIA AI-Q Deep Researcher: https://docs.nvidia.com/aiq-blueprint/latest/architecture/agents/deep-researcher.html
 - AI-Q source repository: https://github.com/NVIDIA-AI-Blueprints/aiq
+- NVIDIA technical blog on AI-Q deep research skills: https://developer.nvidia.com/blog/add-a-specialized-deep-research-skill-to-agent-harnesses/
 
 ## LLM Wiki
 

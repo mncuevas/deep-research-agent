@@ -8,6 +8,7 @@ from deep_research_agent.tools import (
     create_task_packet,
     prepare_aiq_research_request,
     record_source,
+    slugify_topic,
 )
 
 
@@ -46,9 +47,14 @@ def test_build_source_ledger_outputs_markdown_table():
     )
     ledger = build_source_ledger("deep agents", [source])
 
-    assert ledger["path"] == "llm-wiki/raw/source_ledger.md"
+    assert ledger["path"] == "llm-wiki/raw/deep_agents_source_ledger.md"
     assert "| Source ID | Title | Type | Retrieved | Notes |" in ledger["markdown"]
     assert source["source_id"] in ledger["markdown"]
+
+
+def test_slugify_topic_creates_stable_artifact_name():
+    assert slugify_topic("Long-running AI research agents") == "long_running_ai_research_agents"
+    assert slugify_topic("  ") == "research_topic"
 
 
 def test_prepare_aiq_request_names_skill_contract(monkeypatch):

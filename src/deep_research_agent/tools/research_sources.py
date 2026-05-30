@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
@@ -12,6 +13,13 @@ from urllib.parse import urlparse
 def _stable_source_id(title: str, url: str) -> str:
     digest = hashlib.sha1(f"{title.strip()}|{url.strip()}".encode()).hexdigest()
     return f"SRC-{digest[:8].upper()}"
+
+
+def slugify_topic(topic: str) -> str:
+    """Return a filesystem-safe slug for workshop artifact paths."""
+
+    slug = re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")
+    return slug or "research_topic"
 
 
 def create_task_packet(
@@ -115,7 +123,7 @@ def build_source_ledger(topic: str, sources: list[dict[str, Any]]) -> dict[str, 
 
     return {
         "topic": topic.strip(),
-        "path": "llm-wiki/raw/source_ledger.md",
+        "path": f"llm-wiki/raw/{slugify_topic(topic)}_source_ledger.md",
         "markdown": "\n".join(rows),
     }
 

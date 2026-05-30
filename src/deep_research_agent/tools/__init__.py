@@ -6,6 +6,7 @@ from deep_research_agent.tools.research_sources import (
     create_task_packet,
     prepare_aiq_research_request,
     record_source,
+    slugify_topic,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "create_task_packet",
     "prepare_aiq_research_request",
     "record_source",
+    "slugify_topic",
 ]

@@ -13,8 +13,8 @@ The static page gives participants a quick mental model and keeps the project fr
 
 - Easy to share.
 - Works without Python, credentials, or setup.
-- Good for orienting basic software engineers.
-- Better for showing the overall flow: harness, wiki, skills, subagents, dossier.
+- Good for orienting software engineers new to agent frameworks.
+- Better for showing the overall flow: harness, wiki, skills, subagents, brief, source ledger, open questions, and run log.
 
 ## Notebook Strengths
 
@@ -25,4 +25,4 @@ The static page gives participants a quick mental model and keeps the project fr
 
 ## What Not To Do
 
-Do not make the first participant experience a live autonomous model run. Start with the harness anatomy, deterministic tool outputs, and the dossier contract. The live agent should be the final optional cell.
+Do not make the first participant experience a live autonomous model run. Start with the harness anatomy, deterministic tool outputs, and the artifact contract. The live agent should be the final optional cell.

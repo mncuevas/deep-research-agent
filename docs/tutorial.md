@@ -224,6 +224,11 @@ record shape, and one ledger. Once the ledger is useful, add more sources.
 AI-Q is optional in this workshop. Treat it as a specialized backend skill, not
 as a shortcut around review.
 
+The repo includes a local AI-Q teaching shim so the group can inspect the
+request contract without installing a live backend. For real AI-Q research,
+install NVIDIA's official `aiq-deploy` and `aiq-research` skills, start or
+connect to an AI-Q backend, and set `AIQ_SERVER_URL`.
+
 The local helper `prepare_aiq_research_request` creates a request contract:
 
 - research question

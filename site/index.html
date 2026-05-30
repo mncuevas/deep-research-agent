@@ -11,51 +11,552 @@
       <header class="hero">
         <p class="eyebrow">Hands-on</p>
         <h1>Deep Agents Walkthrough</h1>
-        <p>A practical walkthrough for building a long-running research agent with LangChain Deep Agents, skills, subagents, and reviewable workspace artifacts.</p>
+        <p>
+          A short build path for a research agent with tools, files, skills, subagents,
+          and a final review pass.
+        </p>
       </header>
+
       <nav class="nav" aria-label="Walkthrough sections">
         <a href="#framework">Framework</a>
         <a href="#start">Start</a>
+        <a href="#tool">Tool</a>
         <a href="#agent">Agent</a>
+        <a href="#files">Files</a>
         <a href="#skills">Skills</a>
+        <a href="#subagents">Subagents</a>
         <a href="#run">Run</a>
+        <a href="#review">Review</a>
       </nav>
+
       <section id="framework">
         <h2>LangChain Deep Agents framework</h2>
-        <p>Deep Agents is LangChain's higher-level harness for tasks that need more than a single model call and a few tools. It gives the model a runtime with planning, filesystem state, subagents, skills, permissions, and a repeatable invocation path.</p>
-        <p>The useful way to read this repo is from the constructor outward. The model is the reasoning engine. Tools are deterministic Python callables. The backend gives the run a workspace. Permissions set read and write boundaries. Skills encode reusable procedures. Subagents isolate focused work.</p>
+        <p>
+          Deep Agents is LangChain's higher-level agent harness for tasks that need more
+          than a single model call and a few tools. It is built on LangChain and runs on
+          LangGraph, so the agent can plan, use tools, write files, delegate work, stream
+          events, pause for human input, and keep state across a longer run. The useful
+          mental model for this workshop is simple: Deep Agents is the runtime around
+          the model. The model still decides what to do next, but the framework gives it
+          a workspace, a task list, subagents, skills, permissions, and a repeatable way
+          to run.
+        </p>
+        <p>
+          For software engineers new to agent frameworks, the important part is where
+          each behavior lives. Tools are Python functions. The system prompt is the
+          coordinator's job description. The filesystem backend is where intermediate
+          work and final artifacts are stored. Permissions define the allowed read and
+          write boundaries. Skills are reusable instructions for a category of work.
+          Subagents are smaller worker agents with their own prompts, tool lists, and
+          optional permission rules. Once those pieces are visible, a long-running
+          research agent becomes something you can inspect and change.
+        </p>
+        <p>
+          The framework is especially useful for research workflows because research is
+          not one operation. A useful run has to break the task into steps, collect and
+          normalize sources, keep notes outside the main context window, draft an
+          artifact, check the draft against the sources, and leave enough evidence for a
+          human to review. Deep Agents does not solve that by itself. It gives you the
+          structure to express that process in code.
+        </p>
+
+        <h3>The construction point</h3>
+        <p>
+          The call to <code>create_deep_agent</code> is where the harness is assembled.
+          In a small demo, it can take only a model, a few tools, and a prompt. In this
+          workshop repo, the constructor is deliberately richer so participants can see
+          how a practical agent is wired: model, tools, backend, permissions, skills,
+          subagents, and coordinator prompt.
+        </p>
+
         <pre><code>from deepagents import create_deep_agent
 
 agent = create_deep_agent(
     model=config.model,
-    tools=[create_task_packet, record_source, classify_source, build_source_ledger, prepare_aiq_research_request],
+    tools=[
+        create_task_packet,
+        record_source,
+        classify_source,
+        build_source_ledger,
+        prepare_aiq_research_request,
+    ],
     backend=_workspace_backend(config),
     permissions=_workspace_permissions(),
     skills=[str(config.skills_dir)],
     subagents=build_subagents(config),
     system_prompt=COORDINATOR_PROMPT,
 )</code></pre>
+
+        <p>
+          Read this call as an interface contract. The agent can only call the tools you
+          give it. It can only write where the backend and permissions allow it. It can
+          only follow skills that are present in the skill directory. It can only
+          delegate to the subagents you configure. That is the practical difference
+          between "asking an LLM to research something" and building a research system
+          that leaves useful artifacts behind.
+        </p>
+
+        <h3>The framework pieces</h3>
+        <p>
+          The table below is the vocabulary participants need before touching the code.
+          Each row maps a framework concept to a concrete engineering decision in the
+          repo.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Deep Agents concept</th>
+              <th>What it means in practice</th>
+              <th>Where to look in this repo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Model</td>
+              <td>The language model used by the coordinator and, unless overridden, by subagents.</td>
+              <td><code>src/deep_research_agent/config.py</code></td>
+            </tr>
+            <tr>
+              <td>Tools</td>
+              <td>Typed Python functions for deterministic actions such as source records and ledgers.</td>
+              <td><code>src/deep_research_agent/tools/research_sources.py</code></td>
+            </tr>
+            <tr>
+              <td>System prompt</td>
+              <td>The coordinator's operating instructions and output contract.</td>
+              <td><code>COORDINATOR_PROMPT</code> in <code>src/deep_research_agent/agent.py</code></td>
+            </tr>
+            <tr>
+              <td>Filesystem backend</td>
+              <td>The durable workspace for notes, ledgers, drafts, and review artifacts.</td>
+              <td><code>_workspace_backend()</code> in <code>src/deep_research_agent/agent.py</code></td>
+            </tr>
+            <tr>
+              <td>Permissions</td>
+              <td>The read and write envelope for the coordinator and reviewer.</td>
+              <td><code>_workspace_permissions()</code> and <code>_reviewer_permissions()</code></td>
+            </tr>
+            <tr>
+              <td>Skills</td>
+              <td>Reusable procedural instructions loaded when the task needs that behavior.</td>
+              <td><code>.agents/skills/*/SKILL.md</code></td>
+            </tr>
+            <tr>
+              <td>Subagents</td>
+              <td>Specialized workers that keep detailed search, synthesis, or review work out of the main context.</td>
+              <td><code>build_subagents()</code> in <code>src/deep_research_agent/agent.py</code></td>
+            </tr>
+            <tr>
+              <td>Invocation</td>
+              <td>The user request enters as messages, then the run produces files and a final response.</td>
+              <td><code>src/deep_research_agent/cli.py</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>What the built-in runtime gives you</h3>
+        <p>
+          Deep Agents ships with capabilities that are easy to underestimate if you only
+          look at the first tool call. The built-in planning tool lets the agent keep a
+          visible task list. Filesystem tools let it read, write, edit, list, glob, and
+          grep files instead of carrying every intermediate result in the message
+          history. Context management lets large tool outputs and older state be moved
+          out of the active prompt. Subagents let the coordinator send a focused job to
+          another agent and receive a concise result. Skills let a team package a
+          procedure, review rule, or integration pattern without rewriting the main
+          prompt.
+        </p>
+        <p>
+          The point of the walkthrough is to make those capabilities legible. First, run
+          the repo with mocked source data so the mechanics are clear. Then inspect how
+          the workspace changes. Then add skills. Then add subagents. Then treat AI-Q or
+          any other external capability as a skill-backed backend, not as a replacement
+          for source discipline or review.
+        </p>
+
+        <h3>How to teach this section</h3>
+        <p>
+          Start with the constructor and stay close to the code. Ask participants to
+          name what would break if each argument disappeared. Without tools, the agent
+          has no reliable source records. Without a backend, the long run has no durable
+          workspace. Without permissions, write behavior is too broad. Without skills,
+          repeated process lives in one large prompt. Without subagents, source-heavy
+          work crowds the coordinator's context. Without review artifacts, the result is
+          hard to audit.
+        </p>
+        <p>
+          By the end of this first session, the group should be able to explain the
+          Deep Agents framework from the outside in: a user message starts a run, the
+          coordinator plans, tools perform narrow operations, files hold intermediate
+          state, skills provide reusable procedures, subagents isolate focused work, and
+          the final output points back to artifacts that can be reviewed.
+        </p>
+
+        <h3>Official references</h3>
+        <ul>
+          <li>
+            <a href="https://docs.langchain.com/oss/python/deepagents/overview">Deep Agents overview</a>
+          </li>
+          <li>
+            <a href="https://docs.langchain.com/oss/python/deepagents/subagents">Subagents</a>
+          </li>
+          <li>
+            <a href="https://docs.langchain.com/oss/python/deepagents/backends">Backends</a>
+          </li>
+          <li>
+            <a href="https://docs.langchain.com/oss/python/deepagents/skills">Skills</a>
+          </li>
+        </ul>
       </section>
+
       <section id="start">
         <h2>0. Start the repo</h2>
-        <p>Install with UV, run the tests, then open the notebook. The notebook is the main hands-on path and is safe to run without live model credentials.</p>
+        <p>
+          The goal is to see the moving parts of Deep Agents in code. Do this before
+          adding AI-Q or any other external system.
+        </p>
+        <p>
+          A Deep Agents project is easiest to understand when you read it from the
+          outside in. Start with the command-line entry point, then the agent constructor,
+          then the tools, then the skills. This keeps the framework from becoming a
+          black box. By the end of this step, participants should be able to point to
+          the exact file that defines the system prompt, the exact file that defines the
+          tools, and the exact folder that contains the skills.
+        </p>
+
         <pre><code>uv sync --all-groups
-uv run ruff check .
-uv run pytest -q
-uv run --group notebook jupyter lab notebooks/deep_research_agent_walkthrough.ipynb</code></pre>
+uv run pytest
+uv run ruff check .</code></pre>
+
+        <p>Open these files while you work:</p>
+
+        <pre><code>src/deep_research_agent/agent.py
+src/deep_research_agent/tools/research_sources.py
+.agents/skills/
+llm-wiki/agent/TASK_PACKET_TEMPLATE.md
+llm-wiki/wiki/research-briefs/TEMPLATE.md</code></pre>
       </section>
+
+      <section id="tool">
+        <h2>1. Add one small tool</h2>
+        <p>
+          A Deep Agent still starts with ordinary tools. In this repo the tools are
+          local helpers for source records, source ledgers, and AI-Q request contracts.
+        </p>
+        <p>
+          Tools should be small and inspectable. The agent can call them, but the tool
+          itself should not depend on the model making a good judgment. Here,
+          <code>record_source</code> does one narrow thing: it turns a title and URL into
+          a normalized source record with a stable source ID. That stable ID can then
+          travel through the ledger, the draft brief, and the review checklist.
+        </p>
+
+        <pre><code>def record_source(title: str, url: str, source_type: str = "web") -> dict:
+    return {
+        "source_id": stable_id(title, url),
+        "title": title,
+        "url": url,
+        "source_type": source_type,
+        "retrieved_at": today(),
+    }</code></pre>
+
+        <p>
+          Run the helper in the notebook and confirm it returns structured data, not
+          prose.
+        </p>
+        <p>
+          This is the first important design habit: keep low-level operations narrow
+          and typed, then let the agent compose them. If a source record is malformed,
+          the bug should be in a short Python function, not hidden in a paragraph of
+          generated text.
+        </p>
+      </section>
+
       <section id="agent">
-        <h2>1. Create the Deep Agent</h2>
-        <p>The call to <code>create_deep_agent</code> binds together the model, tools, backend, permissions, skills, subagents, and coordinator prompt. Each argument should be explainable as a design decision.</p>
+        <h2>2. Create the Deep Agent</h2>
+        <p>
+          The main construction happens in <code>create_agent()</code>. The important
+          idea is that Deep Agents gives the model a bigger runtime than simple tool
+          calling: planning, filesystem tools, skills, subagents, and context management.
+        </p>
+        <p>
+          The call to <code>create_deep_agent</code> is the center of the walkthrough.
+          It binds together the model, the deterministic tools, the filesystem backend,
+          the permission rules, the skill directory, the subagents, and the coordinator
+          prompt. Each argument is a design decision. Removing one should visibly change
+          what the agent can do.
+        </p>
+
+        <pre><code>from deepagents import create_deep_agent
+
+agent = create_deep_agent(
+    model=config.model,
+    tools=[
+        create_task_packet,
+        record_source,
+        classify_source,
+        build_source_ledger,
+        prepare_aiq_research_request,
+    ],
+    backend=_workspace_backend(config),
+    permissions=_workspace_permissions(),
+    skills=[str(config.skills_dir)],
+    subagents=build_subagents(config),
+    system_prompt=COORDINATOR_PROMPT,
+)</code></pre>
+
+        <p>
+          In the repo, do not treat this as abstract. Point at each argument and say
+          what it changes in the run.
+        </p>
+        <p>
+          For the group, the key distinction is between a simple agent and a deep agent.
+          A simple agent can call tools. A deep agent can also manage files, split work
+          across subagents, load procedural skills, and keep intermediate state out of
+          the main context. That is what makes it suitable for longer research tasks.
+        </p>
       </section>
+
+      <section id="files">
+        <h2>3. Give the agent a workspace</h2>
+        <p>
+          Deep Agents expose filesystem tools such as reading, writing, editing, listing,
+          globbing, and grepping files. This is the part that lets long tasks leave
+          durable intermediate work instead of keeping everything in the conversation.
+        </p>
+        <p>
+          The workspace is what makes the run reviewable. A long research task will
+          create notes, partial results, failed attempts, source records, and draft
+          claims. If all of that lives only in the chat context, it is hard to inspect
+          and easy to lose. The filesystem backend gives the agent a place to put those
+          artifacts while keeping the project structure visible to the human reviewer.
+        </p>
+
+        <pre><code>def _workspace_backend(config):
+    from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
+
+    return CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/workspace/": FilesystemBackend(
+                root_dir=str(config.repo_root),
+                virtual_mode=True,
+            ),
+        },
+    )</code></pre>
+
+        <p>
+          Then restrict writes. The workshop agent should stage artifacts under the LLM
+          Wiki paths and keep secrets out of reach.
+        </p>
+        <p>
+          Permissions are part of the lesson. The agent can read the workspace, but it
+          should not be able to overwrite arbitrary project files or inspect secrets.
+          In this repo, write access is limited to the wiki and raw artifact paths. That
+          makes the expected output easy to find and the failure mode easy to spot.
+        </p>
+
+        <pre><code>FilesystemPermission(
+    operations=["read", "write"],
+    paths=["/workspace/.env"],
+    mode="deny",
+)
+
+FilesystemPermission(
+    operations=["write"],
+    paths=[
+        "/workspace/llm-wiki/wiki/**",
+        "/workspace/llm-wiki/raw/**",
+    ],
+    mode="allow",
+)</code></pre>
+      </section>
+
       <section id="skills">
-        <h2>2. Add skills and subagents</h2>
-        <p>Skills describe procedures the agent can follow. Subagents split source collection, synthesis, AI-Q routing, and read-only review into focused workers.</p>
-        <table><thead><tr><th>Skill</th><th>Purpose</th></tr></thead><tbody><tr><td><code>research-scout</code></td><td>Collect source-backed material.</td></tr><tr><td><code>source-ledger</code></td><td>Preserve source IDs and caveats.</td></tr><tr><td><code>wiki-curator</code></td><td>Stage durable LLM Wiki artifacts.</td></tr><tr><td><code>aiq-research</code></td><td>Prepare optional NVIDIA AI-Q research requests.</td></tr></tbody></table>
+        <h2>4. Add skills</h2>
+        <p>
+          A skill is a procedure the agent can read. It is not a Python function. Use it
+          when the important part is behavior, policy, or workflow.
+        </p>
+        <p>
+          Tools answer “what can the agent call?” Skills answer “how should the agent
+          behave when it does this kind of work?” That makes skills a good place for
+          source discipline, review rules, output templates, and backend-specific
+          instructions. Skills are also easier for a team to review than a long prompt
+          buried inside application code.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th>What it teaches the agent</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>research-scout</code></td>
+              <td>How to collect source-backed material without writing the final answer.</td>
+            </tr>
+            <tr>
+              <td><code>source-ledger</code></td>
+              <td>How to preserve source IDs, caveats, and review questions.</td>
+            </tr>
+            <tr>
+              <td><code>wiki-curator</code></td>
+              <td>How to stage durable draft files in the LLM Wiki.</td>
+            </tr>
+            <tr>
+              <td><code>aiq-research</code></td>
+              <td>How to prepare an optional AI-Q request contract; live AI-Q requires NVIDIA's official skills and a running backend.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Read one skill and answer three questions:</p>
+        <p>
+          This exercise should be concrete. Open a skill file, read its frontmatter, then
+          read the instructions as if you were reviewing a teammate's pull request. A
+          useful skill should say when it applies, what output it expects, and what
+          behavior is out of bounds. If it cannot answer those questions, it is not ready
+          to be part of the harness.
+        </p>
+
+        <ul>
+          <li>When should the agent use this?</li>
+          <li>What output shape does it require?</li>
+          <li>What should the agent refuse or mark for review?</li>
+        </ul>
       </section>
+
+      <section id="subagents">
+        <h2>5. Add subagents</h2>
+        <p>
+          Subagents are useful when a task needs a narrower context or a different
+          permission boundary. In Deep Agents, configured subagents are exposed through
+          the task delegation path.
+        </p>
+        <p>
+          Subagents are not there to make the system look elaborate. They are useful
+          when separation improves the work. A source scout can focus on source records.
+          A synthesis writer can focus on turning records into a draft. A reviewer can
+          inspect staged files without permission to edit them. The coordinator keeps
+          the overall task moving instead of carrying every detail in one context.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Subagent</th>
+              <th>Job</th>
+              <th>Tools</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>source-scout</code></td>
+              <td>Collect and classify sources.</td>
+              <td><code>record_source</code>, <code>classify_source</code></td>
+            </tr>
+            <tr>
+              <td><code>synthesis-writer</code></td>
+              <td>Draft the brief from source-backed notes.</td>
+              <td><code>create_task_packet</code>, <code>build_source_ledger</code></td>
+            </tr>
+            <tr>
+              <td><code>skill-router</code></td>
+              <td>Prepare optional backend requests.</td>
+              <td><code>prepare_aiq_research_request</code></td>
+            </tr>
+            <tr>
+              <td><code>skeptic-reviewer</code></td>
+              <td>Read staged files and flag problems.</td>
+              <td>Read-only filesystem</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          Find <code>_reviewer_permissions()</code> and explain why that subagent cannot
+          write.
+        </p>
+        <p>
+          This is the most important subagent boundary in the repo. A reviewer that can
+          rewrite the draft is not just reviewing; it is changing the artifact it is
+          supposed to inspect. Keeping it read-only makes the review output easier to
+          trust.
+        </p>
+      </section>
+
       <section id="run">
-        <h2>3. Run and review</h2>
-        <p>The final answer is not the main deliverable. The staged brief, source ledger, open questions, and run log are what make the run reviewable.</p>
+        <h2>6. Run the agent</h2>
+        <p>
+          First run the deterministic notebook path. Then run the live agent only if
+          model credentials are configured.
+        </p>
+        <p>
+          The notebook path is the teaching path. It lets participants inspect the
+          contracts without depending on model credentials, live retrieval, or AI-Q.
+          Once the table understands the files, they can run the live agent and compare
+          what changed. That comparison is the lesson: the same harness shape should
+          remain visible whether the backend is mocked, local, or live.
+        </p>
+
+        <pre><code>uv run --group notebook jupyter lab notebooks/deep_research_agent_walkthrough.ipynb</code></pre>
+
+        <pre><code>uv run deep-research-agent \
+  "Compare three current approaches to long-running AI research agents.
+   Use public sources only.
+   Use AI-Q only if available; otherwise mark it unavailable.
+   Stage a brief, source ledger, open questions, and run log."</code></pre>
+
+        <p>Expected files:</p>
+        <p>
+          The final answer from the model is not the main deliverable. The main
+          deliverable is the set of staged files. If those files are missing, unclear, or
+          uncited, the run did not produce a useful research artifact.
+        </p>
+
+        <pre><code>llm-wiki/wiki/research-briefs/&lt;topic&gt;.md
+llm-wiki/raw/&lt;topic&gt;_source_ledger.md
+llm-wiki/raw/&lt;topic&gt;_open_questions.md
+llm-wiki/raw/&lt;topic&gt;_run_log.md</code></pre>
+      </section>
+
+      <section id="review">
+        <h2>7. Review the run</h2>
+        <p>
+          The review is the point of the exercise. Do not score the run by whether the
+          prose sounds good.
+        </p>
+        <p>
+          Review the harness by asking whether another engineer could resume the work.
+          They should be able to see what the task was, which sources were used, what
+          the agent wrote, what it could not verify, whether AI-Q was used, and what
+          should happen next. If the run hides those details, the harness needs another
+          pass.
+        </p>
+
+        <ul>
+          <li>Does every central claim have a source ID?</li>
+          <li>Are source notes separate from synthesis?</li>
+          <li>Did the run log record AI-Q as live, unavailable, or skipped?</li>
+          <li>Did any subagent exceed its job?</li>
+          <li>Did the reviewer catch at least one weak or unsupported claim?</li>
+          <li>What should be changed in the harness before the next run?</li>
+        </ul>
+
+        <p>
+          Pass condition: the team can explain the Deep Agents construction from tool to
+          skill to subagent to staged file.
+        </p>
+        <p>
+          A strong table can also name the next improvement. Examples: add a stricter
+          source-ledger test, install the official AI-Q skills, add a corpus retrieval
+          skill, make the run log more structured, or add an approval gate before
+          promoting a draft.
+        </p>
       </section>
     </main>
   </body>

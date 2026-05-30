@@ -12,6 +12,15 @@ The project combines:
 
 The default path is local and deterministic. Live model calls and AI-Q are extension paths.
 
+This workshop is designed to run from a repository checkout. The Python package
+and console command are installable with UV, but the checkout is the delivery
+artifact because the hands-on flow also uses `.agents/skills/`, `llm-wiki/`,
+`docs/`, `site/`, and `notebooks/`.
+
+`uv.lock` is intentionally not committed. Workshop participants should run
+`uv sync --all-groups` from the checkout so UV resolves the environment for
+their machine.
+
 ## Quick Start
 
 ```bash

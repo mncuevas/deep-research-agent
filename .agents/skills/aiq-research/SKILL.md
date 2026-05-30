@@ -5,8 +5,14 @@ description: Use this skill when a research task needs deeper multi-source synth
 
 # AI-Q Research
 
+This workshop file is a local teaching shim for the AI-Q research lane. It
+shows the request contract the harness should prepare. It is not a vendored
+copy of NVIDIA's official AI-Q skill implementation.
+
 Use this skill when the coordinator asks for AI-Q research through a reachable
-NVIDIA AI-Q Blueprint backend.
+NVIDIA AI-Q Blueprint backend. For a live backend, install NVIDIA's official
+`aiq-deploy` and `aiq-research` skills from the NVIDIA Agent Skills catalog and
+point `AIQ_SERVER_URL` at the running AI-Q service.
 
 ## Preconditions
 

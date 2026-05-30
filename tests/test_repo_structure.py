@@ -74,6 +74,10 @@ def test_notebook_walkthrough_is_valid_json_and_teaches_harness():
         if cell.get("cell_type") == "code"
     )
     assert "prepare_aiq_research_request" in code
+    assert "open_questions_path" in code
+    assert "run_log_path" in code
+    assert "source_ledger.md" in code
+    assert "research-briefs" in code
     assert "uv" in markdown.lower()
 
 
